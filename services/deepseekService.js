@@ -13,15 +13,14 @@ async function classifyEmail(text) {
           {
             role:    "user",
             content: `
-You are an email classifier. 
-Given the following email body, return _only_ a JSON array of labels that apply.
-Possible labels: ["HR","Finance","Support","Sales","Other"].
+                You are an email classifier. 
+                Given the following email body, return _only_ a JSON array of labels that apply.
+                Possible labels: ["HR","Finance","Support","Sales","Other"].
 
-Email body:
----
-${text.trim()}
----
-`
+                Email body:
+                ---
+                ${text.trim()}
+                ---`
           }
         ]
       },
