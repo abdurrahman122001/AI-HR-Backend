@@ -2,14 +2,15 @@ require('dotenv').config();
 const { startWatcher } = require('./controllers/emailController');
 const http = require('http');
 
-// Bind to the port Railway provides (or fallback to 3000 locally)
 const PORT = process.env.PORT || 3000;
 
+// Healthcheck endpoint so Railway sees a live web server
 http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('HR Bot alive');
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end('OK');
 }).listen(PORT, () => {
-  console.log(`🌐 HTTP healthcheck listening on port ${PORT}`);
+  console.log(`🚀 HTTP server listening on port ${PORT}`);
 });
 
+// Now start your IMAP watcher
 startWatcher();
