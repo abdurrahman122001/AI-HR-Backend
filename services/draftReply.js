@@ -1,4 +1,3 @@
-// services/draftReply.js
 const axios = require("axios");
 
 const HR_POLICY = `
@@ -57,66 +56,63 @@ Mavens Advisor Pvt. Ltd. — Human Resources (HR) Policy
 
 12. Holiday Calendar  
    • The company observes Federal holidays. Management may amend the holiday schedule.
-
----
-
-**Leave‐Request Rules Recap**  
-- Paid leave: ≥7 working days’ notice  
-- Unpaid leave: <7 working days’ notice (salary deduction applies)  
-- Sandwich rule applies around off‐days
 `;
 
 async function generateHRReply(body) {
-  try {
-    const resp = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model: "deepseek/deepseek-r1-zero:free",
-        temperature: 0.7,
-        top_p: 0.9,
-        messages: [
-          {
-            role: "system",
-            content: `
-You are a professional HR assistant. Use this policy:
-
-${HR_POLICY}
-
-When replying, write a concise, polite email with:
-- A greeting (“Dear [Name],”)
-- A clear answer
-- A sign-off (“Best regards,\nHR Team”)
-
-For leave requests:
-- Approve paid if ≥7 days’ notice; otherwise unpaid.
-            `.trim(),
-          },
-          { role: "user", content: body.trim() },
-        ],
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        },
-      }
-    );
-
-    let reply = resp.data.choices?.[0]?.message?.content?.trim() || "";
-
-    // Strip any \boxed{…} wrapper
-    reply = reply.replace(/^\\boxed\{/, "").replace(/\}$/, "");
-
-    return reply;
-  } catch (err) {
-    console.error("❌ draftReply error:", err.response?.data || err.message);
-    return `Dear Employee,
-
-Sorry, I couldn't generate a response at this time.
-
-Best regards,
-HR Team`;
-  }
-}
-
-module.exports = { generateHRReply };
+   try {
+     const resp = await axios.post(
+       "https://openrouter.ai/api/v1/chat/completions",
+       {
+         model:       "deepseek/deepseek-r1-zero:free",
+         temperature: 0.0,
+         top_p:       1.0,
+         messages: [
+           {
+             role: "system",
+             content: `
+                        You are a policy‐quoting assistant.  You have the HR policy below.
+                        
+                        - If the user’s question **exactly matches** one of the bullet points, reply with **only** that bullet (verbatim).
+                        - Otherwise, reply with a **one‐to‐two‐sentence summary** of the most relevant policy section.
+                        - Do **not** include greetings, explanations, or extra text—just the bullet or summary.
+                        
+                        HR Policy:
+                        ${HR_POLICY}
+             `.trim(),
+           },
+           {
+             role: "user",
+             content: body.trim(),
+           },
+         ],
+       },
+       {
+         headers: {
+           "Content-Type":  "application/json",
+           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+         },
+       }
+     );
+ 
+     let reply = resp.data.choices?.[0]?.message?.content?.trim() || "";
+ 
+     // Clean up any code fences or boxing
+     reply = reply
+       .replace(/```/g, "")
+       .replace(/^\\boxed\{/, "")
+       .replace(/\}$/, "")
+       .trim();
+ 
+     // If the model answered with an empty string (unlikely), fall back to a generic line
+     if (!reply) {
+       reply = "Sorry, I couldn’t find a matching policy. Please reach out to HR for clarification.";
+     }
+ 
+     return reply;
+   } catch (err) {
+     console.error("❌ draftReply error:", err.response?.data || err.message);
+     return "Sorry, I couldn’t generate a policy quote right now.";
+   }
+ }
+ 
+ module.exports = { generateHRReply };
