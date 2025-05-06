@@ -59,60 +59,51 @@ Mavens Advisor Pvt. Ltd. — Human Resources (HR) Policy
 `;
 
 async function generateHRReply(body) {
-   try {
-     const resp = await axios.post(
-       "https://openrouter.ai/api/v1/chat/completions",
-       {
-         model:       "deepseek/deepseek-r1-zero:free",
-         temperature: 0.0,
-         top_p:       1.0,
-         messages: [
-           {
-             role: "system",
-             content: `
-                        You are a policy‐quoting assistant.  You have the HR policy below.
-                        
-                        - If the user’s question **exactly matches** one of the bullet points, reply with **only** that bullet (verbatim).
-                        - Otherwise, reply with a **one‐to‐two‐sentence summary** of the most relevant policy section.
-                        - Do **not** include greetings, explanations, or extra text—just the bullet or summary.
-                        
-                        HR Policy:
-                        ${HR_POLICY}
-             `.trim(),
-           },
-           {
-             role: "user",
-             content: body.trim(),
-           },
-         ],
-       },
-       {
-         headers: {
-           "Content-Type":  "application/json",
-           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-         },
-       }
-     );
- 
-     let reply = resp.data.choices?.[0]?.message?.content?.trim() || "";
- 
-     // Clean up any code fences or boxing
-     reply = reply
-       .replace(/```/g, "")
-       .replace(/^\\boxed\{/, "")
-       .replace(/\}$/, "")
-       .trim();
- 
-     // If the model answered with an empty string (unlikely), fall back to a generic line
-     if (!reply) {
-       reply = "Sorry, I couldn’t find a matching policy. Please reach out to HR for clarification.";
-     }
- 
-     return reply;
-   } catch (err) {
-     console.error("❌ draftReply error:", err.response?.data || err.message);
-     return "Sorry, I couldn’t generate a policy quote right now.";
-   }
- }
- 
- module.exports = { generateHRReply };
+  try {
+    const resp = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model:       "deepseek/deepseek-r1-zero:free",
+        temperature: 0.0,
+        top_p:       1.0,
+        messages: [
+          {
+            role: "system",
+            content:
+`You are a policy-quoting assistant.
+When given an email question, reply with exactly the relevant bullet(s) from the policy—no extra text.
+Policy:
+${HR_POLICY}`
+          },
+          { role: "user", content: body.trim() }
+        ]
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+
+    let quote = resp.data.choices?.[0]?.message?.content?.trim() || "";
+
+    // Strip any wrappers
+    quote = quote.replace(/```/g, "").replace(/^\\boxed\{/, "").replace(/\}$/, "").trim();
+
+    // If still empty, fall back to the first policy section
+    if (!quote) {
+      console.warn("⚠️ generateHRReply fell back to default policy");
+      return "• Employment contracts will be issued outlining roles, compensation, and expectations.";
+    }
+
+    return quote;
+
+  } catch (err) {
+    console.error("❌ draftReply error:", err.response?.data || err.message);
+    // fallback
+    return "• Employment contracts will be issued outlining roles, compensation, and expectations.";
+  }
+}
+
+module.exports = { generateHRReply };
