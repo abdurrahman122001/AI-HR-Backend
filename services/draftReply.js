@@ -1,3 +1,4 @@
+// services/draftReply.js
 const axios = require("axios");
 
 const HR_POLICY = `
@@ -69,18 +70,20 @@ async function generateHRReply(body) {
         messages: [
           {
             role: "system",
-            content:
-`You are a policy-quoting assistant.
-When given an email question, reply with exactly the relevant bullet(s) from the policy—no extra text.
+            content: `
+You are a policy-quoting assistant. 
+When given an email question, you must reply with **exactly one** of the bullets below (and **only** that bullet), choosing the single most relevant line—even if it’s not an exact match. Do **not** add any extra text, greetings, or explanations.
+
 Policy:
-${HR_POLICY}`
+${HR_POLICY}
+`
           },
           { role: "user", content: body.trim() }
         ]
       },
       {
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type":  "application/json",
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
         }
       }
@@ -88,21 +91,18 @@ ${HR_POLICY}`
 
     let quote = resp.data.choices?.[0]?.message?.content?.trim() || "";
 
-    // Strip any wrappers
-    quote = quote.replace(/```/g, "").replace(/^\\boxed\{/, "").replace(/\}$/, "").trim();
-
-    // If still empty, fall back to the first policy section
-    if (!quote) {
-      console.warn("⚠️ generateHRReply fell back to default policy");
-      return "• Employment contracts will be issued outlining roles, compensation, and expectations.";
-    }
+    // Clean up code fences or boxed wrappers
+    quote = quote
+      .replace(/```/g, "")
+      .replace(/^\\boxed\{/, "")
+      .replace(/\}$/, "")
+      .trim();
 
     return quote;
-
   } catch (err) {
     console.error("❌ draftReply error:", err.response?.data || err.message);
-    // fallback
-    return "• Employment contracts will be issued outlining roles, compensation, and expectations.";
+    // If the API fails completely, we return a minimal catch-all
+    return "Sorry, I’m unable to quote the policy at this time.";
   }
 }
 
