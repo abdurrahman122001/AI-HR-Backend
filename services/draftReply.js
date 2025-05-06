@@ -106,4 +106,5 @@ ${HR_POLICY}
   }
 }
 
+
 module.exports = { generateHRReply };
