@@ -59,52 +59,62 @@ Mavens Advisor Pvt. Ltd. — Human Resources (HR) Policy
    • The company observes Federal holidays. Management may amend the holiday schedule.
 `;
 
-async function generateHRReply(body) {
+async function generateHRReply(emailBody) {
   try {
-    const resp = await axios.post(
+    const messages = [
+      {
+        role: "system",
+        content: `
+                  You are an HR policy assistant.
+                  
+                  You must reply with the **most relevant line** from the HR policy that applies to the user's email. ONLY output one bullet point, exactly as written in the policy.
+                  
+                  If the request is about leave for "tomorrow" or "today", and violates the notice period (7 working days in advance), then select the leave policy bullet mentioning this rule, even if the user doesn't say 'leave policy'.
+                  
+                  Be precise, pick only one most relevant bullet. Do not make up any content.
+                  Here is the HR policy:
+                  
+                  ${HR_POLICY}`.trim(),
+      },
+      {
+        role: "user",
+        content: emailBody.trim(),
+      },
+    ];
+
+    const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model:       "deepseek/deepseek-r1-zero:free",
+        model: "deepseek/deepseek-r1-zero:free",
         temperature: 0.0,
-        top_p:       1.0,
-        messages: [
-          {
-            role: "system",
-            content: `
-You are a policy-quoting assistant. 
-When given an email question, you must reply with **exactly one** of the bullets below (and **only** that bullet), choosing the single most relevant line—even if it’s not an exact match. Do **not** add any extra text, greetings, or explanations.
-
-Policy:
-${HR_POLICY}
-`
-          },
-          { role: "user", content: body.trim() }
-        ]
+        top_p: 1.0,
+        messages,
       },
       {
         headers: {
-          "Content-Type":  "application/json",
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        },
       }
     );
 
-    let quote = resp.data.choices?.[0]?.message?.content?.trim() || "";
+    let quote = response?.data?.choices?.[0]?.message?.content?.trim() || "";
 
-    // Clean up code fences or boxed wrappers
+    // Strip any potential formatting artifacts
     quote = quote
-      .replace(/```/g, "")
       .replace(/^\\boxed\{/, "")
-      .replace(/\}$/, "")
+      .replace(/```/g, "")
+      .replace(/\}$/g, "")
       .trim();
 
     return quote;
-  } catch (err) {
-    console.error("❌ draftReply error:", err.response?.data || err.message);
-    // If the API fails completely, we return a minimal catch-all
+  } catch (error) {
+    console.error(
+      "❌ Error in generateHRReply:",
+      error?.response?.data || error.message
+    );
     return "Sorry, I’m unable to quote the policy at this time.";
   }
 }
-
 
 module.exports = { generateHRReply };
