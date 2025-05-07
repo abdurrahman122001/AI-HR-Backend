@@ -5,13 +5,14 @@ const { parseEmail }      = require('../utils/parser');
 const { classifyEmail }   = require('../services/deepseekService');
 const { generateHRReply } = require('../services/draftReply');
 const { sendAutoReply }   = require('../services/mailService');
+const Employee            = require('../models/Employee');  // your Mongoose model
 
 const imap = new Imap(imapConfig);
 
 imap.on('error', err => console.error('🔥 IMAP Error:', err));
 
 async function checkLatest() {
-  imap.search(['UNSEEN'], (err, uids) => {
+  imap.search(['UNSEEN'], async (err, uids) => {
     if (err) return console.error('❌ Search error:', err);
     if (!uids?.length) return console.log('– No new emails');
 
@@ -24,48 +25,60 @@ async function checkLatest() {
         try {
           const parsed   = await parseEmail(stream);
           const fromInfo = parsed.from?.value?.[0];
-          const fromAddr = fromInfo?.address;
-          if (!fromAddr) return console.log('⚠️ Missing sender; skipping');
+          const fromAddr = fromInfo?.address?.toLowerCase();
+          if (!fromAddr) {
+            console.log('⚠️ Missing sender; skipping');
+            return;
+          }
 
+          // 1) Only reply if sender exists in Employee collection
+          const exists = await Employee.exists({ email: fromAddr });
+          if (!exists) {
+            console.log(`⚠️ ${fromAddr} is not in employees DB; skipping`);
+            return;
+          }
+
+          // 2) Derive friendly name
           const fromName = fromInfo.name
-            || fromAddr.split('@')[0].replace(/[\.\_\-]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
-          const body = (parsed.text||'').trim();
+            || fromAddr.split('@')[0]
+                .replace(/[\.\_\-]/g,' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+
+          const body = (parsed.text || '').trim();
           console.log(`✉️ From ${fromName}: ${body.slice(0,50)}…`);
 
-          // 1) If it looks like a leave request (≥2 dates or the word "leave"), force HR
-          const dateMatches = [...body.matchAll(/\d{4}-\d{2}-\d{2}/g)];
-          const isLeaveQuery = dateMatches.length >= 2 || /\bleave\b/i.test(body);
-
-          // 2) Otherwise, classify via AI
-          let isHR = isLeaveQuery
-            ? true
-            : await classifyEmail(body);
+          // 3) Classify HR relevance
+          const isHR = await classifyEmail(body);
           console.log('🔖 is_hr:', isHR);
-
           if (!isHR) {
             console.log('⚠️ Not HR-related; skipping');
             return;
           }
 
-          // 3) Generate the policy quote
+          // 4) Generate the policy quote
           const quote = await generateHRReply(body);
 
-          // 4) Wrap in a personal greeting & sign-off
-          const fullReply = [
-            `Dear ${fromName},`,
-            '',
-            quote,
-            '',
-            'Best regards,',
-            'HR Team'
-          ].join('\n');
+          // 5) If we got something back, send a personalized reply
+          if (quote) {
+            const fullReply = [
+              `Dear ${fromName},`,
+              "",
+              quote,
+              "",
+              "Best regards,",
+              "HR Team"
+            ].join('\n');
+            sendAutoReply(fromAddr, fullReply);
+          } else {
+            console.log('⚠️ No policy quote generated; skipping');
+          }
 
-          sendAutoReply(fromAddr, fullReply);
         } catch (e) {
           console.error('❌ parse error:', e);
         }
       });
     });
+
     fetcher.once('end',   () => console.log('✓ Done fetching latest'));
     fetcher.once('error', err => console.error('❌ Fetch error:', err));
   });
