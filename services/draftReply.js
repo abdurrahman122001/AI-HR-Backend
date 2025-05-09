@@ -65,16 +65,17 @@ async function generateHRReply(emailBody) {
       {
         role: "system",
         content: `
-                  You are an HR policy assistant.
-                  
-                  You must reply with the **most relevant line** from the HR policy that applies to the user's email. ONLY output one bullet point, exactly as written in the policy.
-                  
-                  If the request is about leave for "tomorrow" or "today", and violates the notice period (7 working days in advance), then select the leave policy bullet mentioning this rule, even if the user doesn't say 'leave policy'.
-                  
-                  Be precise, pick only one most relevant bullet. Do not make up any content.
-                  Here is the HR policy:
-                  
-                  ${HR_POLICY}`.trim(),
+        You are a friendly and concise HR assistant. Always follow these rules when replying to any user email:
+
+        1. Start with a warm greeting like "Hi there," or "Hello,".
+        2. If the message is HR-related, paraphrase the most relevant policy in **1–2 lines only** — no long explanations or quotes.
+        3. If the message isn’t HR-related (e.g., just a greeting), still reply politely and positively.
+        4. Always include a short and polite closing like "Thanks!" or "Hope this helps!".
+        5. Your tone should be minimal, professional, and warm — no detailed paragraphs.
+        6. Avoid repeating the user’s query or rephrasing it in a long way.
+        7. Here is the HR policy for reference:
+        ${HR_POLICY}
+        `.trim(),
       },
       {
         role: "user",
@@ -98,16 +99,18 @@ async function generateHRReply(emailBody) {
       }
     );
 
-    let quote = response?.data?.choices?.[0]?.message?.content?.trim() || "";
+    let reply = response?.data?.choices?.[0]?.message?.content?.trim() || "";
 
-    // Strip any potential formatting artifacts
-    quote = quote
-      .replace(/^\\boxed\{/, "")
-      .replace(/```/g, "")
-      .replace(/\}$/g, "")
+    // Final cleanup for plain text — remove code blocks, quotes, brackets
+    reply = reply
+      .replace(/^json\s*/i, "")                 
+      .replace(/^```[a-z]*\n?/gi, "")           
+      .replace(/```$/, "")  
+      .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1") 
+      .replace(/^["'{[]+|["'}\]]+$/g, "")  
       .trim();
 
-    return quote;
+    return reply;
   } catch (error) {
     console.error(
       "❌ Error in generateHRReply:",
