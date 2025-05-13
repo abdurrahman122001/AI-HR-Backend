@@ -1,4 +1,5 @@
 // services/draftReply.js
+require('dotenv').config();
 const axios = require("axios");
 
 const HR_POLICY = `
@@ -83,7 +84,7 @@ async function generateHRReply(emailBody) {
       },
     ];
 
-    const response = await axios.post(
+   const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         model: "deepseek/deepseek-r1-zero:free",
@@ -94,7 +95,8 @@ async function generateHRReply(emailBody) {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+          // **Use the correct env var name here:**
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         },
       }
     );
@@ -108,6 +110,7 @@ async function generateHRReply(emailBody) {
       .replace(/```$/, "")  
       .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1") 
       .replace(/^["'{[]+|["'}\]]+$/g, "")  
+      .replace(/\\boxed{/g, "")
       .trim();
 
     return reply;
