@@ -1,7 +1,5 @@
 // services/draftReply.js
-require('dotenv').config();
 const axios = require("axios");
-const DEEPSEEK_API_KEY = "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";
 
 const HR_POLICY = `
 Mavens Advisor Pvt. Ltd. — Human Resources (HR) Policy
@@ -85,7 +83,7 @@ async function generateHRReply(emailBody) {
       },
     ];
 
-   const response = await axios.post(
+    const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         model: "deepseek/deepseek-r1-zero:free",
@@ -96,8 +94,7 @@ async function generateHRReply(emailBody) {
       {
         headers: {
           "Content-Type": "application/json",
-          // **Use the correct env var name here:**
-          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
       }
     );
@@ -110,8 +107,8 @@ async function generateHRReply(emailBody) {
       .replace(/^```[a-z]*\n?/gi, "")           
       .replace(/```$/, "")  
       .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1") 
-      .replace(/^["'{[]+|["'}\]]+$/g, "")  
-      .replace(/\\boxed{/g, "")
+      .replace(/^["'{[]+|["'}\]]+$/g, "") 
+      .replace(/\\boxed/g, "")
       .trim();
 
     return reply;

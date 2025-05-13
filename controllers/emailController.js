@@ -1,4 +1,3 @@
-// controllers/emailController.js
 const Imap                = require('imap');
 const imapConfig          = require('../config/imapConfig');
 const { parseEmail }      = require('../utils/parser');
