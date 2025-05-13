@@ -86,7 +86,7 @@ async function generateHRReply(emailBody) {
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "deepseek/deepseek-v3-base:free",
+        model: "qwen/qwen3-0.6b-04-28:free",
         temperature: 0.0,
         top_p: 1.0,
         messages,
