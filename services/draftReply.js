@@ -86,7 +86,7 @@ async function generateHRReply(emailBody) {
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "qwen/qwen3-0.6b-04-28:free",
+        model: "deepseek/deepseek-r1-zero:free",
         temperature: 0.0,
         top_p: 1.0,
         messages,
@@ -103,13 +103,25 @@ async function generateHRReply(emailBody) {
 
     // Final cleanup for plain text — remove code blocks, quotes, brackets
     reply = reply
-      .replace(/^json\s*/i, "")                 
-      .replace(/^```[a-z]*\n?/gi, "")           
-      .replace(/```$/, "")  
-      .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1") 
-      .replace(/^["'{[]+|["'}\]]+$/g, "") 
+      // .replace(/^json\s*/i, "")
+      // .replace(/^```[a-z]*\n?/gi, "")
+      // .replace(/```$/, "")
+      // .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1")
+      // .replace(/^["'{[]+|["'}\]]+$/g, "")
+      // .replace(/\\boxed/g, "")
+      // .replace(/\\\{/, "")
+
+      .replace(/^[\{\[]+/, "")
+      .replace(/^json\s*/i, "")
+      .replace(/^```[a-z]*\n?/gi, "")
+      .replace(/```$/, "")
+      .replace(/^{[\s\S]*?"reply":\s*"(.+?)"\s*}$/s, "$1")
+      // strip stray trailing quotes/brackets
+      .replace(/^["'\[\{]+|["'\]\}]+$/g, "")
       .replace(/\\boxed/g, "")
       .trim();
+
+    reply += "\n\nBest regards,\nHR Team";
 
     return reply;
   } catch (error) {

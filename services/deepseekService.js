@@ -61,7 +61,7 @@ async function classifyEmail(text) {
      const resp = await axios.post(
        'https://openrouter.ai/api/v1/chat/completions',
        {
-         model:       "qwen/qwen3-0.6b-04-28:free",
+         model:       "deepseek/deepseek-r1-zero:free",
          temperature: 0.0,
          top_p:       1.0,
          messages: [

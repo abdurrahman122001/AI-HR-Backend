@@ -3,7 +3,7 @@ const axios = require('axios');
 const getAIResponse = async (question) => {
   try {
     const response = await axios.post('https://api.openai.com/v1/completions', {
-      model: 'text-davinci-003',
+      model: 'deepseek/deepseek-r1-zero:free',
       prompt: `Answer this HR-related question: ${question}`,
       max_tokens: 150
     }, {
